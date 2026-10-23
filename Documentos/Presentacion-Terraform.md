@@ -72,8 +72,6 @@ La VPC, el balanceador, el security group y los dos roles ya existían en el tal
 
 ## Problemas del despliegue y diferencias con las prácticas
 
-Las prácticas dejan la imagen `latest` del repositorio `ucm-proyecto-final-fastapi`, guardan CSV en S3 y los consultan con Athena. Avisan por correo con Lambda, SNS y EventBridge, y meten la API key desde SSM.
-
 Aquí la cuenta rechazó subir capas a ese repositorio. También rechazó crear un bucket de S3 Vectors y una tabla de DynamoDB, que eran las dos primeras opciones para guardar las recomendaciones. El clúster, el target group y la prioridad 30 eran los de la API de menús, así que esa práctica tenía que estar destruida: dos reglas no comparten prioridad.
 
 El primer arranque empaquetaba la aplicación y el modelo en un tar de unos 400 MB. Falló por finales de línea de Windows en el script y por ficheros ocultos de macOS dentro del paquete. La tarea no llegaba a estar sana.
