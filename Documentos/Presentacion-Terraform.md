@@ -40,8 +40,6 @@ Al arrancar, la tarea sale a Internet por la red del taller e instala FastAPI. C
 
 Cuando alguien abre la URL, el navegador llama al balanceador por el puerto 80. La regla de prioridad 30 reconoce la ruta de este alumno y el target group reenvía la petición a la tarea, al puerto 8000. La página es un formulario. Al enviar un título, el proceso busca ese nombre en el JSON que ya tiene en memoria, suma los pesos si hay varios títulos y devuelve el HTML. Esa consulta no vuelve a S3.
 
-El target group, por su lado, llama a `/health` cada 15 segundos. Esa ruta solo responde que la tarea está viva y no abre el bucket.
-
 ## Flujo de una consulta
 
 1. En el formulario se escribe uno o varios títulos. Si el nombre tiene espacios, va entre comillas. El navegador envía eso con un GET.
