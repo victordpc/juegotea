@@ -17,12 +17,12 @@ locals {
     pip install --no-cache-dir fastapi==0.161.1 uvicorn==0.54.0 boto3==1.43.118
     mkdir -p /opt/juegotea
     python -c 'import boto3, os
-s3 = boto3.client("s3", region_name=os.environ["AWS_REGION"])
-bucket = os.environ["S3_BUCKET"]
-destino = "/opt/juegotea"
-s3.download_file(bucket, "consulta.py", destino + "/consulta.py")
-s3.download_file(bucket, "web.py", destino + "/web.py")
-s3.download_file(bucket, os.environ["S3_KEY"], destino + "/recomendaciones.json")'
+    s3 = boto3.client("s3", region_name=os.environ["AWS_REGION"])
+    bucket = os.environ["S3_BUCKET"]
+    destino = "/opt/juegotea"
+    s3.download_file(bucket, "consulta.py", destino + "/consulta.py")
+    s3.download_file(bucket, "web.py", destino + "/web.py")
+    s3.download_file(bucket, os.environ["S3_KEY"], destino + "/recomendaciones.json")'
     cd /opt/juegotea
     export RECOMENDACIONES=/opt/juegotea/recomendaciones.json
     exec python -m uvicorn web:app --host 0.0.0.0 --port 8000
