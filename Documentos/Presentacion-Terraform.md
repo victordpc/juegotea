@@ -42,6 +42,15 @@ Cuando alguien abre la URL, el navegador llama al balanceador por el puerto 80. 
 
 El target group, por su lado, llama a `/health` cada 15 segundos. Esa ruta solo responde que la tarea está viva y no abre el bucket.
 
+## Flujo de una consulta
+
+1. En el formulario se escribe uno o varios títulos. Si el nombre tiene espacios, va entre comillas. El navegador envía eso con un GET.
+2. El balanceador recibe la petición en el puerto 80. La regla de prioridad 30 la reconoce y el target group la entrega a la tarea, en el puerto 8000.
+3. La aplicación separa los títulos y busca cada nombre en `recomendaciones.json`, sin distinguir mayúsculas. Ese fichero ya está en memoria: la consulta no vuelve a S3.
+4. Cada juego tiene hasta 20 vecinos. Un vecino es otro juego al que los mismos usuarios han puesto un 9 o más. El peso es cuántos usuarios coinciden. El vecino guarda nombre, año y peso.
+5. Con un solo título, el resultado son esos vecinos, del peso más alto al más bajo. Con varios, se suman los pesos del mismo vecino y se quitan los títulos que se acaban de pedir.
+6. La página muestra como mucho 20 líneas, con la forma `Terraforming Mars · 2016` y el número de usuarios. Si el título no tiene vecinos, dice que no hay información.
+
 ## Servicios
 
 | Servicio | Nombre | Para qué |
