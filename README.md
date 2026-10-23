@@ -1,6 +1,6 @@
 # Juegotea
 
-Recomendador de juegos de mesa. A partir de uno o varios títulos propone juegos parecidos. El catálogo vive en S3 y la consulta compara embeddings en la propia aplicación.
+Recomendador de juegos de mesa. A partir de uno o varios títulos propone juegos que los mismos usuarios han puntuado con un 9 o más. El peso es cuántos usuarios comparten ese par. La tabla vive en S3.
 
 El código parte del proyecto de la asignatura de sistemas de información. Este repositorio lo deja listo para instalar con [asdf](https://asdf-vm.com/) y para desplegar la página en la cuenta de AWS del curso de Terraform.
 
@@ -43,18 +43,18 @@ La ruta es `http://127.0.0.1:8000/ucm-victor-del-pino-ucm/` y la comprobación `
 | --- | --- |
 | `Juegotea.py` | Consola. Llama a `consulta.recomendar` |
 | `web.py` | Página FastAPI en el puerto 8000 |
-| `consulta.py` | Baja `catalogo.npz` de S3 y devuelve hasta cinco nombres |
-| `cargar_indice.py` | Lee `Files/NodosJuegos.csv`, calcula los embeddings y sube el fichero |
-| `01_usuarios.py` | Descarga quien ha comentado Azul (`230802`) y escribe `Files/usuarios.csv` |
-| `02_datosJuegos.py` | Recorre esos usuarios y deja una fila por juego en `Files/NodosJuegos.csv` |
+| `consulta.py` | Baja `recomendaciones.json` de S3 y devuelve hasta veinte vecinos |
+| `cargar_recomendaciones.py` | Cuenta los pares, se queda con los 20 vecinos de más peso y sube el JSON |
+| `01_usuarios.py` | Descarga quien ha comentado los juegos origen y escribe `Files/usuarios.csv` |
+| `02_datosJuegos.py` | Recorre esos usuarios, guarda una fila por juego y los pares con nota de al menos 9 |
 | `terraform/` | Bucket, tarea y servicio. El documento está en [terraform/README.md](terraform/README.md) |
 | `grafo/` | Construcción antigua del grafo. La consulta no la usa |
 
-`01_usuarios.py` y `02_datosJuegos.py` se lanzan desde la raíz y necesitan la variable `BGG_TOKEN`. Sin ella se detienen y no vacían los CSV. Después, `python cargar_indice.py` vuelve a subir el catálogo. La página no lanza esos scripts.
+`01_usuarios.py` y `02_datosJuegos.py` se lanzan desde la raíz y necesitan la variable `BGG_TOKEN`. Sin ella se detienen y no vacían los CSV. `02_datosJuegos.py` pide una colección por usuario y escribe `Files/AristasJuegos.csv`. Después, `python cargar_recomendaciones.py` cuenta esos pares y sube `recomendaciones.json`. La página no lanza esos scripts.
 
-El texto que se embebe junta el nombre, el año y los jugadores. El modelo es `all-MiniLM-L6-v2`, en local, con 384 dimensiones.
+Con un solo título, el resultado son los 20 vecinos de más peso. Con varios, se suman los pesos y se quitan los títulos pedidos. El peso es el número de usuarios.
 
-En Git se quedan `Files/usuarios.csv` y `Files/NodosJuegos.csv`, que son la entrada de esa carga. `Files/Recomendaciones.csv` y los CSV de aristas ya no se usan: los genera `grafo/` si se vuelve a lanzar, y no se versionan.
+En Git se quedan `Files/usuarios.csv` y `Files/NodosJuegos.csv`. `Files/AristasJuegos.csv` lo genera el paso 2 y no se versiona.
 
 ## Despliegue
 

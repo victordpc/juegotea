@@ -29,7 +29,7 @@ def mensajeSalida(resultado, encontrados):
             msg += ' son: '
 
         for juego in resultado:
-            msg += juego + ', '
+            msg += juego["nombre"] + ', '
         msg = msg[:-2]
 
     else:

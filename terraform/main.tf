@@ -12,20 +12,43 @@ resource "aws_ecs_cluster" "cluster" {
   }
 }
 
+locals {
+  arranque = <<-EOT
+    pip install --no-cache-dir fastapi==0.161.1 uvicorn==0.54.0 boto3==1.43.118
+    mkdir -p /opt/juegotea
+    python -c 'import boto3, os
+s3 = boto3.client("s3", region_name=os.environ["AWS_REGION"])
+bucket = os.environ["S3_BUCKET"]
+destino = "/opt/juegotea"
+s3.download_file(bucket, "consulta.py", destino + "/consulta.py")
+s3.download_file(bucket, "web.py", destino + "/web.py")
+s3.download_file(bucket, os.environ["S3_KEY"], destino + "/recomendaciones.json")'
+    cd /opt/juegotea
+    export RECOMENDACIONES=/opt/juegotea/recomendaciones.json
+    exec python -m uvicorn web:app --host 0.0.0.0 --port 8000
+  EOT
+}
+
 resource "aws_ecs_task_definition" "api" {
   family                   = "${local.prefijo}-api"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
-  memory                   = "2048"
+  memory                   = "512"
   execution_role_arn       = data.aws_iam_role.ecs_ejecucion.arn
   task_role_arn            = data.aws_iam_role.ecs_tarea.arn
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
 
   container_definitions = jsonencode([
     {
       name      = "fastapi"
-      image     = "${data.aws_ecr_repository.fastapi.repository_url}:${var.imagen_tag}"
+      image     = "public.ecr.aws/docker/library/python:3.12-slim-bookworm"
       essential = true
+      command   = ["sh", "-c", local.arranque]
       portMappings = [
         {
           containerPort = 8000
@@ -51,15 +74,15 @@ resource "aws_ecs_task_definition" "api" {
         },
         {
           name  = "S3_KEY"
-          value = "catalogo.npz"
+          value = "recomendaciones.json"
         },
         {
           name  = "AWS_REGION"
           value = var.aws_region
         },
         {
-          name  = "HF_HUB_OFFLINE"
-          value = "1"
+          name  = "RECOMENDACIONES"
+          value = "/opt/juegotea/recomendaciones.json"
         },
       ]
     }
@@ -112,7 +135,7 @@ resource "aws_ecs_service" "api" {
   desired_count   = var.numero_tareas
   launch_type     = "FARGATE"
 
-  health_check_grace_period_seconds = 180
+  health_check_grace_period_seconds = 120
 
   network_configuration {
     subnets          = data.aws_subnets.privadas.ids

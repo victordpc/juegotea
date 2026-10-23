@@ -1,20 +1,19 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import io
+import json
 import os
 
 import boto3
-import numpy as np
 
 REGION = os.environ.get("AWS_REGION", "eu-west-1")
 BUCKET = os.environ.get("S3_BUCKET", "ucm-victor-del-pino-ucm-juegos")
-CLAVE = os.environ.get("S3_KEY", "catalogo.npz")
-MODELO = "all-MiniLM-L6-v2"
+CLAVE = os.environ.get("S3_KEY", "recomendaciones.json")
+RUTA = os.environ.get("RECOMENDACIONES", "")
+LIMITE = 20
 
 _cliente = None
-_modelo = None
-_catalogo = None
+_tabla = None
 
 
 def cliente():
@@ -24,53 +23,19 @@ def cliente():
     return _cliente
 
 
-def modelo():
-    global _modelo
-    if _modelo is None:
-        from sentence_transformers import SentenceTransformer
-
-        _modelo = SentenceTransformer(MODELO)
-    return _modelo
-
-
-def catalogo():
-    global _catalogo
-    if _catalogo is None:
-        cuerpo = cliente().get_object(Bucket=BUCKET, Key=CLAVE)["Body"].read()
-        datos = np.load(io.BytesIO(cuerpo), allow_pickle=False)
-        _catalogo = (
-            datos["vectores"],
-            datos["nombres"],
-        )
-    return _catalogo
+def tabla():
+    global _tabla
+    if _tabla is None:
+        if RUTA != "" and os.path.exists(RUTA):
+            with open(RUTA, "r") as fichero:
+                _tabla = json.load(fichero)
+        else:
+            cuerpo = cliente().get_object(Bucket=BUCKET, Key=CLAVE)["Body"].read()
+            _tabla = json.loads(cuerpo)
+    return _tabla
 
 
-def texto_catalogo(nombre, anio, minimo, maximo):
-    return "%s. Año %s. Jugadores %s-%s." % (nombre, anio, minimo, maximo)
-
-
-def embeber(texto):
-    vector = modelo().encode(texto, normalize_embeddings=True)
-    return np.asarray(vector, dtype=np.float32)
-
-
-def embeber_lote(textos):
-    vectores = modelo().encode(textos, normalize_embeddings=True, batch_size=64)
-    return np.asarray(vectores, dtype=np.float32)
-
-
-def consultar(vector, limite):
-    vectores, nombres = catalogo()
-    if len(nombres) == 0:
-        return []
-    puntuaciones = vectores @ vector
-    cantidad = min(limite, len(nombres))
-    posiciones = np.argpartition(-puntuaciones, cantidad - 1)[:cantidad]
-    orden = posiciones[np.argsort(-puntuaciones[posiciones])]
-    return [(str(nombres[i]), float(puntuaciones[i])) for i in orden]
-
-
-def recomendar(titulos, limite=5):
+def recomendar(titulos, limite=LIMITE):
     consultados = []
     vistos = set()
     for titulo in titulos:
@@ -84,14 +49,21 @@ def recomendar(titulos, limite=5):
     if len(consultados) == 0:
         return [], [], list(titulos)
 
+    datos = tabla()
     acumulado = {}
     for titulo in consultados:
-        for nombre, puntuacion in consultar(embeber(titulo), limite + len(consultados)):
-            if nombre.casefold() in vistos:
+        for vecino in datos.get(titulo.casefold(), []):
+            if vecino["nombre"].casefold() in vistos:
                 continue
-            previo = acumulado.get(nombre)
-            if previo is None or puntuacion > previo:
-                acumulado[nombre] = puntuacion
+            previo = acumulado.get(vecino["nombre"])
+            if previo is None:
+                acumulado[vecino["nombre"]] = {
+                    "nombre": vecino["nombre"],
+                    "anio": vecino["anio"],
+                    "peso": int(vecino["peso"]),
+                }
+            else:
+                previo["peso"] += int(vecino["peso"])
 
-    ordenados = sorted(acumulado, key=lambda nombre: acumulado[nombre], reverse=True)
+    ordenados = sorted(acumulado.values(), key=lambda juego: juego["peso"], reverse=True)
     return ordenados[:limite], consultados, []

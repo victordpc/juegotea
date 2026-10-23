@@ -10,12 +10,6 @@ variable "identificador_alumno" {
   default     = "victor_del_pino_ucm"
 }
 
-variable "imagen_tag" {
-  description = "Etiqueta de la imagen en el ECR del taller. No usa latest."
-  type        = string
-  default     = "juegotea"
-}
-
 variable "numero_tareas" {
   description = "Tareas Fargate del servicio."
   type        = number

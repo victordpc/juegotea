@@ -21,22 +21,30 @@ def leerUsuarios(fichero):
 
     i = 1
     longitud = len(nombreUsuarios)
-    for nombreUsuario in nombreUsuarios:
-        try:
-            print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
-            obtenerDatosUsuario(nombreUsuario.strip(), True)
-            i += 1
-        except Exception:
-            tratarUsuarioError(True, nombreUsuario)
+    with open(ficheroDestinoAristasJuegos, 'w') as ficheroAristas:
+        for nombreUsuario in nombreUsuarios:
+            try:
+                print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
+                obtenerDatosUsuario(nombreUsuario.strip(), True)
+                calcularAristas(ficheroAristas)
+                i += 1
+            except Exception:
+                valores_Juegos.clear()
+                tratarUsuarioError(True, nombreUsuario)
+            if i % 25 == 0:
+                ficheroAristas.flush()
 
 
 # Volvemos a tratar los usuarios que fallaron
 def leerUsuariosError():
-    for nombreUsuario in usersError:
-        try:
-            obtenerDatosUsuario(nombreUsuario, False)
-        except Exception:
-            tratarUsuarioError(False, nombreUsuario)
+    with open(ficheroDestinoAristasJuegos, 'a') as ficheroAristas:
+        for nombreUsuario in usersError:
+            try:
+                obtenerDatosUsuario(nombreUsuario, False)
+                calcularAristas(ficheroAristas)
+            except Exception:
+                valores_Juegos.clear()
+                tratarUsuarioError(False, nombreUsuario)
 
 
 # Obtenemos los datos de los juegos valorados por el usuario
@@ -63,7 +71,7 @@ def obtenerDatosUsuario(user, TratarErrores):
             root = ET.fromstring(response.text.strip())
 
             if root.tag != 'errors':
-                # Obtenemos los nombres y los ids de los juegos valorados
+                valores_Juegos.clear()
                 for child in root:
                     idJuego = child.attrib['objectid']
 
@@ -89,7 +97,11 @@ def obtenerDatosUsuario(user, TratarErrores):
 
                         # Estadisticas
                         if datosJuego.tag == 'stats':
-                            # Los juegos nos siempre tienen las mismas estdisticas
+                            for estadisticas in datosJuego:
+                                if estadisticas.tag == 'rating':
+                                    nota = estadisticas.attrib.get('value', '')
+                                    if nota != '':
+                                        valores_Juegos[idJuego] = float(nota)
                             for atributo in datosJuego.attrib:
                                 if atributo == 'minplayers':
                                     minplayers = datosJuego.attrib['minplayers']
@@ -122,6 +134,7 @@ def obtenerDatosUsuario(user, TratarErrores):
             else:
                 tratarUsuarioError(TratarErrores, user)
         except Exception:
+            valores_Juegos.clear()
             print('Datos mal formados')
 
     else:
@@ -145,7 +158,25 @@ def guardarNodoFichero(juego):
     nodosUnicos[str(juego[0])] = linea + '\n'
 
 
+def calcularAristas(ficheroAristas):
+    while len(valores_Juegos) != 0:
+        juego1, valor1 = valores_Juegos.popitem()
+        if valor1 < valorParaArista:
+            continue
+        for juego2, valor2 in valores_Juegos.items():
+            if valor2 < valorParaArista or juego1 == juego2:
+                continue
+            if int(juego1) < int(juego2):
+                clave = juego1 + '-' + juego2
+            else:
+                clave = juego2 + '-' + juego1
+            ficheroAristas.write(clave + '\n')
+
+
 def escribirNodosUnicos():
+    if len(nodosUnicos) == 0:
+        print('No se escriben nodos: no ha llegado ningun juego')
+        return
     with open(ficheroDestinoNodosJuegos, 'w') as fichero:
         fichero.write(
             'Id, Name, Year, MinPlayers, MaxPlayers, MinPlayTime, MaxPlayTime, PlayingTime, NumOwned, Age,' + '\n')
@@ -186,13 +217,16 @@ def retryUsuarios(fichero):
     longitud = len(nombreUsuarios)
     siguenError = []
 
-    for nombreUsuario in nombreUsuarios:
-        try:
-            print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
-            obtenerDatosUsuario(nombreUsuario.strip(), True)
-            i += 1
-        except Exception:
-            siguenError.append(nombreUsuario)
+    with open(ficheroDestinoAristasJuegos, 'a') as ficheroAristas:
+        for nombreUsuario in nombreUsuarios:
+            try:
+                print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
+                obtenerDatosUsuario(nombreUsuario.strip(), True)
+                calcularAristas(ficheroAristas)
+                i += 1
+            except Exception:
+                valores_Juegos.clear()
+                siguenError.append(nombreUsuario)
 
     with open(ficheroUsuariosError, 'w') as usuarios_Error:
         usuarios_Error.write('UsuariosFallidos' + '\n')
@@ -225,6 +259,7 @@ if __name__ == '__main__':
     usersError = []
 
     nodosUnicos = dict()
+    valores_Juegos = dict()
     sesion = requests.Session()
     token = os.environ.get("BGG_TOKEN", "").strip()
     if token == "":
@@ -234,6 +269,7 @@ if __name__ == '__main__':
     # Variables
 
     # Configuración
+    valorParaArista = 9.0
     segundosEspera = 5
     maxIntentos202 = 12
 
@@ -246,6 +282,8 @@ if __name__ == '__main__':
 
     ficheroDestinoNodosJuegos = os.path.join(
         os.getcwd(), carpetaFicheros, 'NodosJuegos.csv')
+    ficheroDestinoAristasJuegos = os.path.join(
+        os.getcwd(), carpetaFicheros, 'AristasJuegos.csv')
 
     correcto = configurarFicheros()
     # Configuración

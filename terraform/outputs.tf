@@ -4,6 +4,6 @@ output "url_api" {
 }
 
 output "bucket_vectores" {
-  description = "Bucket con el catálogo de embeddings."
+  description = "Bucket con recomendaciones.json."
   value       = aws_s3_bucket.juegos.bucket
 }
