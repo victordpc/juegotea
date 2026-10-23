@@ -34,6 +34,14 @@ flowchart LR
 
 La regla usa la prioridad que guarda SSM, para no pisar la de otro alumno. La tarea no tiene IP pública: entra en la VPC del taller con su security group. El rol de ejecución arranca la tarea y el rol de la tarea lee el bucket.
 
+## Cómo funciona la web
+
+Al arrancar, la tarea sale a Internet por la red del taller e instala FastAPI. Con el rol de la tarea baja de S3 `consulta.py`, `web.py` y `recomendaciones.json`. Ese JSON se carga una vez en el proceso. Los logs de ese arranque van a CloudWatch con el rol de ejecución.
+
+Cuando alguien abre la URL, el navegador llama al balanceador por el puerto 80. La regla de prioridad 30 reconoce la ruta de este alumno y el target group reenvía la petición a la tarea, al puerto 8000. La página es un formulario. Al enviar un título, el proceso busca ese nombre en el JSON que ya tiene en memoria, suma los pesos si hay varios títulos y devuelve el HTML. Esa consulta no vuelve a S3.
+
+El target group, por su lado, llama a `/health` cada 15 segundos. Esa ruta solo responde que la tarea está viva y no abre el bucket.
+
 ## Servicios
 
 | Servicio | Nombre | Para qué |
