@@ -1,6 +1,8 @@
 # Infraestructura en AWS
 
-La página está en la cuenta `482861842012`, región `eu-west-1`. El navegador entra por el balanceador del taller. Una regla lleva el tráfico a una tarea de Fargate, en una subred privada. Esa tarea lee la tabla de recomendaciones en S3 y escribe sus logs en CloudWatch.
+`http://ucm-proyecto-final-alb-1076017167.eu-west-1.elb.amazonaws.com/ucm-victor-del-pino-ucm/`
+
+El navegador entra por el balanceador del taller. Una regla lleva el tráfico a una tarea de Fargate, en una subred privada. Esa tarea lee la tabla de recomendaciones en S3 y escribe sus logs en CloudWatch.
 
 ```mermaid
 flowchart LR
