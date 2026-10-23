@@ -10,11 +10,8 @@ __pycache__/
 .idea/
 .vscode/
 
-# Salidas del grafo antiguo y de los reintentos. No las lee la consulta.
-Files/AristasGrafo.csv
+# Las genera el paso 2. La consulta lee el JSON, no estos CSV.
 Files/AristasJuegos.csv
-Files/NodosGrafo.csv
-Files/Recomendaciones.csv
 Files/usuariosError.csv
 
 # Terraform

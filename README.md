@@ -13,7 +13,7 @@ El código parte del proyecto de la asignatura de sistemas de información. Este
 | Python | 3.12.15 |
 | Terraform | 1.15.9 |
 
-Hace falta una sesión de AWS en `eu-west-1` con permiso de lectura sobre el bucket del catálogo.
+Hace falta una sesión de AWS en `eu-west-1` con permiso de lectura sobre el bucket de las recomendaciones.
 
 ## Puesta en marcha
 
@@ -48,7 +48,6 @@ La ruta es `http://127.0.0.1:8000/ucm-victor-del-pino-ucm/` y la comprobación `
 | `01_usuarios.py` | Descarga quien ha comentado los juegos origen y escribe `Files/usuarios.csv` |
 | `02_datosJuegos.py` | Recorre esos usuarios, guarda una fila por juego y los pares con nota de al menos 9 |
 | `terraform/` | Bucket, tarea y servicio. El documento está en [terraform/README.md](terraform/README.md) |
-| `grafo/` | Construcción antigua del grafo. La consulta no la usa |
 
 `01_usuarios.py` y `02_datosJuegos.py` se lanzan desde la raíz y necesitan la variable `BGG_TOKEN`. Sin ella se detienen y no vacían los CSV. `02_datosJuegos.py` pide una colección por usuario y escribe `Files/AristasJuegos.csv`. Después, `python cargar_recomendaciones.py` cuenta esos pares y sube `recomendaciones.json`. La página no lanza esos scripts.
 
