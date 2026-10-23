@@ -6,9 +6,6 @@ import os
 import sys
 from collections import defaultdict
 
-import boto3
-from botocore.exceptions import ClientError
-
 import consulta
 
 VECINOS = 20
@@ -74,15 +71,11 @@ def construir(nodos, vecinos):
     return tabla
 
 
-def subir(tabla):
-    cuerpo = json.dumps(tabla, ensure_ascii=False).encode("utf-8")
-    consulta.cliente().put_object(
-        Bucket=consulta.BUCKET,
-        Key=consulta.CLAVE,
-        Body=cuerpo,
-        ContentType="application/json",
-    )
-    return len(cuerpo)
+def guardar(tabla):
+    ruta = os.path.join(os.getcwd(), consulta.CLAVE)
+    with open(ruta, "w") as fichero:
+        json.dump(tabla, fichero, ensure_ascii=False)
+    return os.path.getsize(ruta)
 
 
 def main():
@@ -92,8 +85,8 @@ def main():
     try:
         nodos = leer_nodos(NODOS)
         tabla = construir(nodos, vecinos_de(contar_pares(ARISTAS)))
-        tamano = subir(tabla)
-    except ClientError as fallo:
+        tamano = guardar(tabla)
+    except OSError as fallo:
         print("Error: %s" % fallo)
         return 1
     print("Juegos %s" % len(tabla))

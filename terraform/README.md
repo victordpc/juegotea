@@ -60,7 +60,7 @@ El cifrado es AES256, el de S3 en reposo. El acceso público está bloqueado y e
 
 La cuenta de este alumno puede crear buckets cuyo nombre empieza por `ucm-`. No puede crear un bucket de S3 Vectors ni una tabla de DynamoDB, y el rol `ucm-ecs-tarea` tampoco puede consultar esos servicios. Sí puede leer objetos de buckets `ucm-*`. La consulta baja `recomendaciones.json` y resuelve el peso en el proceso.
 
-`cargar_recomendaciones.py`, en la raíz del repositorio, es quien sube ese objeto. Terraform crea el bucket y no sube el fichero.
+`cargar_recomendaciones.py` escribe `recomendaciones.json` en la raíz. El `apply` sube ese fichero, `consulta.py` y `web.py` al bucket, y solo entonces arranca la tarea.
 
 ## Servicio
 

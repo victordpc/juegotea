@@ -49,7 +49,7 @@ La ruta es `http://127.0.0.1:8000/ucm-victor-del-pino-ucm/` y la comprobación `
 | `02_datosJuegos.py` | Recorre esos usuarios, guarda una fila por juego y los pares con nota de al menos 9 |
 | `terraform/` | Bucket, tarea y servicio. El documento está en [terraform/README.md](terraform/README.md) |
 
-`01_usuarios.py` y `02_datosJuegos.py` se lanzan desde la raíz y necesitan la variable `BGG_TOKEN`. Sin ella se detienen y no vacían los CSV. `02_datosJuegos.py` pide una colección por usuario y escribe `Files/AristasJuegos.csv`. Después, `python cargar_recomendaciones.py` cuenta esos pares y sube `recomendaciones.json`. La página no lanza esos scripts.
+`01_usuarios.py` y `02_datosJuegos.py` se lanzan desde la raíz y necesitan la variable `BGG_TOKEN`. Sin ella se detienen y no vacían los CSV. `02_datosJuegos.py` pide una colección por usuario y escribe `Files/AristasJuegos.csv`. Después, `python cargar_recomendaciones.py` cuenta esos pares y deja `recomendaciones.json` en la raíz. `terraform apply` sube ese fichero y el código, y arranca la página. La página no lanza esos scripts.
 
 Con un solo título, el resultado son los 20 vecinos de más peso. Con varios, se suman los pesos y se quitan los títulos pedidos. El peso es el número de usuarios.
 

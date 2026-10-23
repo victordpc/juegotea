@@ -149,5 +149,16 @@ resource "aws_ecs_service" "api" {
     container_port   = 8000
   }
 
-  depends_on = [aws_lb_listener_rule.api]
+  triggers = {
+    consulta        = aws_s3_object.consulta.etag
+    web             = aws_s3_object.web.etag
+    recomendaciones = aws_s3_object.recomendaciones.etag
+  }
+
+  depends_on = [
+    aws_lb_listener_rule.api,
+    aws_s3_object.consulta,
+    aws_s3_object.web,
+    aws_s3_object.recomendaciones,
+  ]
 }
