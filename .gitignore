@@ -1,0 +1,31 @@
+# Entorno local
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+
+# Sistema y editor
+.DS_Store
+.idea/
+.vscode/
+
+# Datos intermedios del grafo. Los regeneran 03, 04 y 05.
+Files/AristasGrafo.csv
+Files/AristasJuegos.csv
+Files/NodosGrafo.csv
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*.zip
