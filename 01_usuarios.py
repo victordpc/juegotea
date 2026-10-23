@@ -16,31 +16,36 @@ def main():
         continuar = True
 
         while continuar:
-            response = requests.get(
-                "https://api.geekdo.com/xmlapi2/thing?id=%(juego)s&comments=1&page=%(pagina)s&pagesize=100" % {'juego': juego, 'pagina': pagina})
+            response = sesion.get(
+                "https://api.geekdo.com/xmlapi2/thing?id=%(juego)s&comments=1&page=%(pagina)s&pagesize=100" % {'juego': juego, 'pagina': pagina},
+                timeout=30)
 
-            if response.status_code == 200:
-                root = ET.fromstring(response.text)
+            if response.status_code != 200:
+                print("Error API %s" % response.status_code)
+                if response.status_code == 401:
+                    print("Hace falta la variable BGG_TOKEN")
+                return False
 
-                if root.tag != 'errors':
-                    # Recorremos los hijos del juego
-                    for nodo in root[0]:
-                        if (nodo.tag == 'name'):
-                            if (nodo.attrib['type'] == 'primary'):
-                                print('Juego '+nodo.attrib['value'] + ' pagina: ' + str(pagina))
-                        if nodo.tag == 'comments':
-                            # Calculamos si seguimos pidiendo paginas
-                            numeroComentarios = nodo.attrib['totalitems']
-                            if pagina*100 >= int(numeroComentarios):
-                                continuar = False
+            root = ET.fromstring(response.text)
 
-                            for comentario in nodo:
-                                if comentario.attrib['rating'] != 'N/A':
-                                    nombre = comentario.attrib['username']
-                                    usuarios[nombre] = 0
+            if root.tag != 'errors':
+                for nodo in root[0]:
+                    if (nodo.tag == 'name'):
+                        if (nodo.attrib['type'] == 'primary'):
+                            print('Juego '+nodo.attrib['value'] + ' pagina: ' + str(pagina))
+                    if nodo.tag == 'comments':
+                        numeroComentarios = nodo.attrib['totalitems']
+                        if pagina*100 >= int(numeroComentarios):
+                            continuar = False
+
+                        for comentario in nodo:
+                            if comentario.attrib['rating'] != 'N/A':
+                                nombre = comentario.attrib['username']
+                                usuarios[nombre] = 0
 
             pagina += 1
     guardarUsuarios(usuarios)
+    return True
 
 
 # Gestión de los ficheros que se usan
@@ -51,12 +56,12 @@ def configurarFicheros():
 
     # Creamos el fichero para guardar los nodos
     # Creamos la cabecera del fichero
-    with open(ficheroUsarios, 'w') as usuarios:
-        usuarios.write('Usr,' + '\n')
+    return True
 
 
 def guardarUsuarios(usuarios):
-    with open(ficheroUsarios, 'a') as fichero:
+    with open(ficheroUsarios, 'w') as fichero:
+        fichero.write('Usr,' + '\n')
         for usuario in usuarios.keys():
             fichero.write(usuario + ',\n')
 
@@ -71,8 +76,13 @@ if __name__ == '__main__':
     carpetaFicheros = 'Files'
     ficheroUsarios = os.path.join(os.getcwd(), carpetaFicheros, 'usuarios.csv')
     configurarFicheros()
+    sesion = requests.Session()
+    token = os.environ.get("BGG_TOKEN", "").strip()
+    if token:
+        sesion.headers["Authorization"] = "Bearer " + token
     # Configuración
 
-    main()
+    if not main():
+        sys.exit(1)
 
     print('Fin')

@@ -1,0 +1,9 @@
+.venv
+.git
+terraform
+Files
+Documentos
+**/__pycache__
+**/*.csv
+**/*.tfstate
+**/*.tfstate.*

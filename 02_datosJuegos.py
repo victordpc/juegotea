@@ -21,45 +21,40 @@ def leerUsuarios(fichero):
 
     i = 1
     longitud = len(nombreUsuarios)
-    with open(ficheroDestinoNodosJuegos, "a") as ficheroNodos:
-        with open(ficheroDestinoAristasJuegos, "a") as ficheroAristas:
-            for nombreUsuario in nombreUsuarios:
-                try:
-                    print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
-                    obtenerDatosUsuario(nombreUsuario, ficheroNodos, True)
-                    i += 1
-
-                    calcularAristas(ficheroAristas)
-                except:
-                    tratarUsuarioError(True, nombreUsuario)
+    for nombreUsuario in nombreUsuarios:
+        try:
+            print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
+            obtenerDatosUsuario(nombreUsuario.strip(), True)
+            i += 1
+        except Exception:
+            tratarUsuarioError(True, nombreUsuario)
 
 
 # Volvemos a tratar los usuarios que fallaron
 def leerUsuariosError():
-    with open(ficheroDestinoNodosJuegos, "a") as ficheroNodos:
-        with open(ficheroDestinoAristasJuegos, "a") as ficheroAristas:
-            for nombreUsuario in usersError:
-                try:
-                    obtenerDatosUsuario(nombreUsuario, ficheroNodos, False)
-                    calcularAristas(ficheroAristas)
-                except:
-                    tratarUsuarioError(False, nombreUsuario)
+    for nombreUsuario in usersError:
+        try:
+            obtenerDatosUsuario(nombreUsuario, False)
+        except Exception:
+            tratarUsuarioError(False, nombreUsuario)
 
 
 # Obtenemos los datos de los juegos valorados por el usuario
 # recibido como parámetro
-def obtenerDatosUsuario(user, ficheroNodos, TratarErrores):
-
-    response = requests.get(
-        "https://www.boardgamegeek.com/xmlapi/collection/%(usr)s?rated=1" % {'usr': user})
-
-    # Si recibimos una respuesta 202 tenemos que esperar a que la api genere
-    # los datos del usuario pedido, tenemos que volver a realizar la petición
-    # pasados X segundos
-    while response.status_code == 202:
+def pedirColeccion(user):
+    url = "https://www.boardgamegeek.com/xmlapi/collection/%s?rated=1" % user
+    response = sesion.get(url, timeout=30)
+    intentos = 0
+    while response.status_code == 202 and intentos < maxIntentos202:
         time.sleep(segundosEspera)
-        response = requests.get(
-            "https://www.boardgamegeek.com/xmlapi/collection/%(usr)s?rated=1" % {'usr': user})
+        intentos += 1
+        response = sesion.get(url, timeout=30)
+    return response
+
+
+def obtenerDatosUsuario(user, TratarErrores):
+
+    response = pedirColeccion(user)
 
     # xml = response.text.replace('\t', ' ')
 
@@ -71,14 +66,6 @@ def obtenerDatosUsuario(user, ficheroNodos, TratarErrores):
                 # Obtenemos los nombres y los ids de los juegos valorados
                 for child in root:
                     idJuego = child.attrib['objectid']
-
-                    # Añadimos el juego y su nota a la lista
-                    for datosJuego in child:
-                        if datosJuego.tag == 'stats':
-                            for estadisticas in datosJuego:
-                                if estadisticas.tag == 'rating':
-                                    nota = estadisticas.attrib['value']
-                                    valores_Juegos[idJuego] = float(nota)
 
                     nombreJuego = ''
                     yearJuego = -1
@@ -119,7 +106,6 @@ def obtenerDatosUsuario(user, ficheroNodos, TratarErrores):
                                 if atributo == 'age':
                                     age = datosJuego.attrib['age']
 
-                    juegos_Tratados[idJuego] = nombreJuego
                     juego = []
                     juego.append(idJuego)
                     juego.append(nombreJuego)
@@ -132,7 +118,7 @@ def obtenerDatosUsuario(user, ficheroNodos, TratarErrores):
                     juego.append(numowned)
                     juego.append(age)
 
-                    guardarNodoFichero(ficheroNodos, juego)
+                    guardarNodoFichero(juego)
             else:
                 tratarUsuarioError(TratarErrores, user)
         except Exception:
@@ -152,31 +138,19 @@ def tratarUsuarioError(TratarErrores, user):
 
 
 # Guardamos un nodo en el fichero de resultados
-def guardarNodoFichero(fichero, juego):
+def guardarNodoFichero(juego):
+    linea = ''
     for dato in juego:
-        fichero.write(str(dato).strip() + ', ')
-    fichero.write('\n')
+        linea += str(dato).strip() + ', '
+    nodosUnicos[str(juego[0])] = linea + '\n'
 
 
-# Calculamos los juegos relacionados entre sí para cada usuario
-# Dos juegos estarán relacionados siempre que un mismo usuario
-# los haya valorado con una nota superior o igual a una variable
-def calcularAristas(ficheroAristas):
-    while len(valores_Juegos) != 0:
-        juego1, valor1 = valores_Juegos.popitem()
-
-        if valor1 >= valorParaArista:
-            for juego2, valor2 in valores_Juegos.items():
-                if valor2 >= valorParaArista:
-                    if juego1 != juego2:
-                        # Creamos el identificador de la arista
-                        clave = ''
-                        if(int(juego1) < int(juego2)):
-                            clave = juego1+'-'+juego2
-                        else:
-                            clave = juego2+'-'+juego1
-
-                        ficheroAristas.write(clave+'\n')
+def escribirNodosUnicos():
+    with open(ficheroDestinoNodosJuegos, 'w') as fichero:
+        fichero.write(
+            'Id, Name, Year, MinPlayers, MaxPlayers, MinPlayTime, MaxPlayTime, PlayingTime, NumOwned, Age,' + '\n')
+        for linea in nodosUnicos.values():
+            fichero.write(linea)
 
 
 # Gestión de los ficheros que se usan
@@ -186,17 +160,6 @@ def configurarFicheros():
     # Aseguramos que exista la carpeta para guardar los ficheros
     if not os.path.exists(os.path.join(os.getcwd(), carpetaFicheros)):
         os.makedirs(os.path.join(os.getcwd(), carpetaFicheros))
-
-    # Creamos el fichero para guardar los nodos
-    # Creamos la cabecera del fichero
-    with open(ficheroDestinoNodosJuegos, 'w') as nodos_Juegos:
-        nodos_Juegos.write(
-            'Id, Name, Year, MinPlayers, MaxPlayers, MinPlayTime, MaxPlayTime, PlayingTime, NumOwned, Age,' + '\n')
-
-    # Creamos el fichero para guardar las aristas
-    # Creamos la cabecera del fichero
-    with open(ficheroDestinoAristasJuegos, 'w') as aristas_Juegos:
-        aristas_Juegos.write('Relacion' + '\n')
 
     # Creamos el fichero para guardar los usuarios que han dado error
     if not os.path.exists(ficheroUsuariosError):
@@ -223,17 +186,13 @@ def retryUsuarios(fichero):
     longitud = len(nombreUsuarios)
     siguenError = []
 
-    with open(ficheroDestinoNodosJuegos, "a") as ficheroNodos:
-        with open(ficheroDestinoAristasJuegos, "a") as ficheroAristas:
-            for nombreUsuario in nombreUsuarios:
-                try:
-                    print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
-                    obtenerDatosUsuario(nombreUsuario, ficheroNodos, True)
-                    i += 1
-
-                    calcularAristas(ficheroAristas)
-                except:
-                    siguenError.append(nombreUsuario)
+    for nombreUsuario in nombreUsuarios:
+        try:
+            print(str(i)+'/' + str(longitud) + ' '+str(nombreUsuario))
+            obtenerDatosUsuario(nombreUsuario.strip(), True)
+            i += 1
+        except Exception:
+            siguenError.append(nombreUsuario)
 
     with open(ficheroUsuariosError, 'w') as usuarios_Error:
         usuarios_Error.write('UsuariosFallidos' + '\n')
@@ -253,22 +212,30 @@ def main():
         # Reintentamos los usuarios que han dado error
         leerUsuariosError()
 
+        escribirNodosUnicos()
+
     elif len(sys.argv) == 2:
         if sys.argv[1] == '--errores':  # Ejecución para tratar errores
             retryUsuarios(ficheroUsuariosError)
+            escribirNodosUnicos()
 
 
 if __name__ == '__main__':
     # Variables
     usersError = []
 
-    juegos_Tratados = dict()
-    valores_Juegos = dict()
+    nodosUnicos = dict()
+    sesion = requests.Session()
+    token = os.environ.get("BGG_TOKEN", "").strip()
+    if token == "":
+        print("Hace falta la variable BGG_TOKEN")
+        sys.exit(1)
+    sesion.headers["Authorization"] = "Bearer " + token
     # Variables
 
     # Configuración
-    valorParaArista = 9.0
     segundosEspera = 5
+    maxIntentos202 = 12
 
     carpetaFicheros = 'Files'
 
@@ -279,8 +246,6 @@ if __name__ == '__main__':
 
     ficheroDestinoNodosJuegos = os.path.join(
         os.getcwd(), carpetaFicheros, 'NodosJuegos.csv')
-    ficheroDestinoAristasJuegos = os.path.join(
-        os.getcwd(), carpetaFicheros, 'AristasJuegos.csv')
 
     correcto = configurarFicheros()
     # Configuración
